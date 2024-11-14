@@ -4,6 +4,15 @@ use crate::services::decryption;
 use actix_web::{web, HttpResponse};
 use std::sync::Arc;
 
+#[utoipa::path(
+    post,
+    path = "/decrypt",
+    request_body = DecryptRequest,
+    responses(
+        (status = 200, description = "Message decrypted successfully", body = DecryptResponse),
+        (status = 500, description = "Decryption failed")
+    )
+)]
 pub async fn decrypt(
     req: web::Json<DecryptRequest>,
     config: web::Data<Arc<Config>>,

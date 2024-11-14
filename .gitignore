@@ -1,2 +1,5 @@
 /target
 .env
+**/*.rs.bk 
+.DS_Store
+.vscode/ 

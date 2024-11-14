@@ -4,6 +4,15 @@ use crate::services::encryption;
 use actix_web::{web, HttpResponse};
 use std::sync::Arc;
 
+#[utoipa::path(
+    post,
+    path = "/encrypt",
+    request_body = EncryptRequest,
+    responses(
+        (status = 200, description = "Message encrypted successfully", body = EncryptResponse),
+        (status = 500, description = "Encryption failed")
+    )
+)]
 pub async fn encrypt(
     req: web::Json<EncryptRequest>,
     config: web::Data<Arc<Config>>,
