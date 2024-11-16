@@ -15,3 +15,4 @@ EXPOSE 8080
 
 # Command to run the application
 CMD ["./target/release/secure_encryption_api"]
+EXPOSE 8080
