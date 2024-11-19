@@ -24,11 +24,11 @@ COPY Cargo.toml Cargo.lock ./
 RUN mkdir src && echo "fn main() {}" > src/main.rs
 
 # Build dependencies first
-RUN cargo build --release
+RUN cargo build 
 
 # Copy the rest of the application code and rebuild the actual binary
 COPY . .
-RUN cargo build --release
+RUN cargo build 
 
 # Stage 2: Runtime Stage
 FROM debian:buster-slim AS runtime
