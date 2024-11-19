@@ -1,36 +1,55 @@
-# Use a specific Rust version to avoid unexpected changes
-FROM rust:1.72 AS builder
+# Stage 1: Build Stage
+FROM rust:1.72-slim-buster AS build
 
-# Set a directory inside the container for the app
-WORKDIR /usr/src/app
+# Set environment variables for Rust compilation
+ENV RUSTFLAGS="-C target-cpu=native"
+ENV CARGO_HOME="/usr/local/cargo"
+ENV PATH="${CARGO_HOME}/bin:${PATH}"
 
-# Copy only the files needed for dependency resolution
+# Install required dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libssl-dev \
+    pkg-config \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Cache dependencies by copying only the Cargo.toml and Cargo.lock first
 COPY Cargo.toml Cargo.lock ./
 
-# Pre-fetch and compile dependencies (use Docker's caching layers efficiently)
-RUN mkdir src && echo 'fn main() {}' > src/main.rs
+# Create a dummy source file to prevent rebuilding unnecessary layers
+RUN mkdir src && echo "fn main() {}" > src/main.rs
+
+# Build dependencies first
 RUN cargo build --release
 
-# Copy the rest of the application files and build the app
+# Copy the rest of the application code and rebuild the actual binary
 COPY . .
 RUN cargo build --release
 
-# Use a minimal base image for running the app
-FROM debian:bullseye-slim AS runtime
+# Stage 2: Runtime Stage
+FROM debian:buster-slim AS runtime
 
-# Install only necessary dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+# Install minimal dependencies for runtime
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory in the runtime container
-WORKDIR /usr/src/app
+# Set the working directory inside the container
+WORKDIR /app
 
-# Copy the compiled binary from the builder stage
-COPY --from=builder /usr/src/app/target/release/secure_encryption_api .
+# Copy the compiled binary from the build stage
+COPY --from=build /app/target/release/secure_encryption_api .
 
-# Inform Docker that the container listens on port 8080
+# Ensure the binary is executable
+RUN chmod +x /app/secure_encryption_api
+
+# Expose the application port
 EXPOSE 8080
 
-# Define the default command to run the app
+# Define the default command to run the application
 CMD ["./secure_encryption_api"]
