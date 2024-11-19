@@ -1,18 +1,35 @@
-// src/config/mod.rs
-use dotenv::dotenv;
-use std::env;
+use aes_gcm::{Aes256Gcm, Key, KeyInit};
 
+use std::sync::Arc;
+
+#[derive(Clone)]
 pub struct Config {
-    pub aes_key: String,
+    pub cipher: Arc<Aes256Gcm>, // Shared cipher instance
 }
 
 impl Config {
-    pub fn from_env() -> Result<Self, String> {
-        dotenv().ok();
-        let aes_key = env::var("AES_KEY").map_err(|_| "AES_KEY must be set in .env file")?;
+    pub fn from_env() -> Result<Self, ConfigError> {
+        dotenv::dotenv().ok();
+
+        let aes_key = std::env::var("AES_KEY").map_err(|_| ConfigError::MissingKey)?;
+
         if aes_key.len() != 32 {
-            return Err("AES_KEY must be exactly 32 bytes for AES-256 encryption.".to_string());
+            return Err(ConfigError::InvalidKeyLength);
         }
-        Ok(Config { aes_key })
+
+        let cipher_key = Key::<Aes256Gcm>::from_slice(aes_key.as_bytes());
+        let cipher = Aes256Gcm::new(cipher_key);
+
+        Ok(Self {
+            cipher: Arc::new(cipher),
+        })
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ConfigError {
+    #[error("AES_KEY environment variable is not set.")]
+    MissingKey,
+    #[error("AES_KEY must be exactly 32 bytes.")]
+    InvalidKeyLength,
 }

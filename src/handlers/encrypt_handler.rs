@@ -1,8 +1,10 @@
-use crate::config::Config;
-use crate::models::{encrypt_request::EncryptRequest, encrypt_response::EncryptResponse};
-use crate::services::encryption;
+use crate::{
+    config::Config,
+    errors::ApiError,
+    models::encrypt_decrypt::{EncryptRequest, EncryptResponse},
+    services::encryption,
+};
 use actix_web::{web, HttpResponse};
-use std::sync::Arc;
 
 #[utoipa::path(
     post,
@@ -10,15 +12,20 @@ use std::sync::Arc;
     request_body = EncryptRequest,
     responses(
         (status = 200, description = "Message encrypted successfully", body = EncryptResponse),
+        (status = 400, description = "Validation error"),
         (status = 500, description = "Encryption failed")
     )
 )]
 pub async fn encrypt(
     req: web::Json<EncryptRequest>,
-    config: web::Data<Arc<Config>>,
-) -> HttpResponse {
-    match encryption::encrypt_message(&req.message, config.get_ref().clone()) {
-        Ok(encrypted_message) => HttpResponse::Ok().json(EncryptResponse { encrypted_message }),
-        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
-    }
+    config: web::Data<Config>,
+) -> Result<HttpResponse, ApiError> {
+    // Validate request
+    req.validate()?;
+
+    // Encrypt the message
+    let encrypted_message = encryption::encrypt_message(&req.message, &config)?;
+
+    // Return the response
+    Ok(HttpResponse::Ok().json(EncryptResponse { encrypted_message }))
 }

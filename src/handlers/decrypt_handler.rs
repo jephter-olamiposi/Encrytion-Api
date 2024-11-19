@@ -1,8 +1,10 @@
-use crate::config::Config;
-use crate::models::{decrypt_request::DecryptRequest, decrypt_response::DecryptResponse};
-use crate::services::decryption;
+use crate::{
+    config::Config,
+    errors::ApiError,
+    models::encrypt_decrypt::{DecryptRequest, DecryptResponse},
+    services::decryption,
+};
 use actix_web::{web, HttpResponse};
-use std::sync::Arc;
 
 #[utoipa::path(
     post,
@@ -10,15 +12,20 @@ use std::sync::Arc;
     request_body = DecryptRequest,
     responses(
         (status = 200, description = "Message decrypted successfully", body = DecryptResponse),
+        (status = 400, description = "Validation error"),
         (status = 500, description = "Decryption failed")
     )
 )]
 pub async fn decrypt(
     req: web::Json<DecryptRequest>,
-    config: web::Data<Arc<Config>>,
-) -> HttpResponse {
-    match decryption::decrypt_message(&req.encrypted_message, config.get_ref().clone()) {
-        Ok(original_message) => HttpResponse::Ok().json(DecryptResponse { original_message }),
-        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
-    }
+    config: web::Data<Config>,
+) -> Result<HttpResponse, ApiError> {
+    // Validate request
+    req.validate()?;
+
+    // Decrypt the message
+    let original_message = decryption::decrypt_message(&req.encrypted_message, &config)?;
+
+    // Return the response
+    Ok(HttpResponse::Ok().json(DecryptResponse { original_message }))
 }

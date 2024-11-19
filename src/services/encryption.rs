@@ -1,26 +1,31 @@
-use crate::config::Config;
-use aes_gcm::aead::{Aead, KeyInit};
-use aes_gcm::{Aes256Gcm, Key, Nonce};
-use base64;
-use rand::Rng;
-use std::sync::Arc;
+use crate::{config::Config, errors::ApiError};
+use aes_gcm::aead::{Aead, Nonce};
+use aes_gcm::Aes256Gcm;
+use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+use base64::engine::Engine;
+use flate2::write::GzEncoder;
+use flate2::Compression;
+use std::io::Write;
 
-pub fn encrypt_message(
-    message: &str,
-    config: Arc<Config>,
-) -> Result<String, Box<dyn std::error::Error>> {
-    let key = Key::<Aes256Gcm>::from_slice(config.aes_key.as_bytes());
-    let cipher = Aes256Gcm::new(key);
+pub fn encrypt_message(message: &str, config: &Config) -> Result<String, ApiError> {
+    let nonce_bytes = rand::random::<[u8; 12]>();
+    let nonce = Nonce::<Aes256Gcm>::from_slice(&nonce_bytes);
 
-    let nonce_bytes = rand::thread_rng().gen::<[u8; 12]>();
-    let nonce = Nonce::from_slice(&nonce_bytes);
+    let compressed = compress_message(message)?;
 
-    let ciphertext = cipher
-        .encrypt(nonce, message.as_bytes())
-        .map_err(|e| e.to_string())?;
-    Ok(format!(
-        "{}:{}",
-        base64::encode(nonce),
-        base64::encode(ciphertext)
-    ))
+    let result = config
+        .cipher
+        .encrypt(nonce, compressed.as_ref())
+        .map(|ciphertext| BASE64_STANDARD.encode([nonce.as_slice(), &ciphertext].concat()))
+        .map_err(|_| ApiError::EncryptionError);
+
+    result
+}
+
+fn compress_message(message: &str) -> Result<Vec<u8>, ApiError> {
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+    encoder
+        .write_all(message.as_bytes())
+        .map_err(|_| ApiError::InternalError)?;
+    encoder.finish().map_err(|_| ApiError::InternalError)
 }
