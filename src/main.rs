@@ -1,7 +1,7 @@
-use actix_web::{middleware, web, App, HttpServer}; // Added HttpResponse
-
+use actix_web::{middleware, web, App, HttpServer};
 use dotenv::dotenv;
 use env_logger;
+use log::info;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -13,7 +13,6 @@ mod services;
 
 use config::Config;
 use handlers::{decrypt_handler, encrypt_handler};
-
 use models::encrypt_decrypt::{DecryptRequest, DecryptResponse, EncryptRequest, EncryptResponse};
 
 #[derive(OpenApi)]
@@ -31,17 +30,17 @@ struct ApiDoc;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // Load environment variables and initialize logger
     dotenv().ok();
-    env_logger::init();
+    env_logger::init(); // Initialize logger for middleware::Logger
 
-    // Load configuration
+    info!("Loading configuration...");
     let config = Config::from_env().expect("Failed to load configuration");
+    info!("Configuration loaded successfully.");
 
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(config.clone()))
-            .wrap(middleware::Logger::default())
+            .wrap(middleware::Logger::default()) // Enable request/response logging
             .service(SwaggerUi::new("/docs/{_:.*}").url("/api-doc/openapi.json", ApiDoc::openapi()))
             .route("/encrypt", web::post().to(encrypt_handler::encrypt))
             .route("/decrypt", web::post().to(decrypt_handler::decrypt))
