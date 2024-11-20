@@ -30,28 +30,24 @@ struct ApiDoc;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // Initialize dotenv and logger
     dotenv().ok();
-    env_logger::init(); // Enable logger
-                        // Load configuration
+    env_logger::init(); // Initialize logger for middleware::Logger
+
     info!("Loading configuration...");
     let config = Config::from_env().expect("Failed to load configuration");
-    info!(
-        "Configuration loaded successfully with port: {}",
-        config.port
-    );
-    // Store the port separately to avoid borrowing issues
-    let port = config.port;
+    info!("Configuration loaded successfully.");
+
+    let port = config.port; // Extract port for server binding
 
     HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(config.clone())) // Clone config to avoid move
-            .wrap(middleware::Logger::default()) // Enable logging
+            .app_data(web::Data::new(config.clone()))
+            .wrap(middleware::Logger::default()) // Enable request/response logging
             .service(SwaggerUi::new("/docs/{_:.*}").url("/api-doc/openapi.json", ApiDoc::openapi()))
             .route("/encrypt", web::post().to(encrypt_handler::encrypt))
             .route("/decrypt", web::post().to(decrypt_handler::decrypt))
     })
-    .bind(("0.0.0.0", port))? // Use port from config
+    .bind(("0.0.0.0", port))? // Use port from Config
     .run()
     .await
 }

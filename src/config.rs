@@ -9,6 +9,7 @@ pub struct Config {
 }
 
 impl Config {
+    /// Loads configuration from environment variables
     pub fn from_env() -> Result<Self, ConfigError> {
         dotenv::dotenv().ok();
 
