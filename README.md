@@ -27,7 +27,7 @@
 
 # Interactive API Documentation
 - Explore the API in Swagger UI: [Secure Encryption API Docs](https://encryption-api-cdn0.onrender.com/docs/)
-- Test the API using Postman:[ Postman Collection Link](https://www.postman.com/lunar-module-geoscientist-9458215/jephter-olaifa/collection/pb26snh/secure-encryption-api?action=share&creator=33056158)
+- Test the API using Postman: https://www.postman.com/lunar-module-geoscientist-9458215/jephter-olaifa/collection/9yjmi3d/secure-encryption-api?action=share&creator=33056158
 
 # How It Works 👌🏼
  Encryption Logic 
